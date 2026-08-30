@@ -1,21 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
-interface ImageItem {
+interface MediaItem {
   id: string;
   src: string;
   alt: string;
   title?: string;
   date?: string;
+  type: "image" | "video";
 }
 
 export default function Home() {
-  const [images, setImages] = useState<ImageItem[]>([]);
+  const [media, setMedia] = useState<MediaItem[]>([]);
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedImage, setSelectedImage] = useState<ImageItem | null>(null);
+  const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("pinnedImageIds");
@@ -32,7 +33,7 @@ export default function Home() {
     );
   }, [pinnedIds]);
 
-  const fetchImages = async () => {
+  const fetchMedia = async () => {
     try {
       setLoading(true);
 
@@ -40,16 +41,16 @@ export default function Home() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.details || "Failed to fetch images");
+        throw new Error(data.details || "Failed to fetch media");
       }
 
-      setImages(data);
+      setMedia(data);
       setError(null);
     } catch (err) {
-      console.error("Error fetching images:", err);
+      console.error("Error fetching media:", err);
 
       setError(
-        err instanceof Error ? err.message : "Failed to fetch images"
+        err instanceof Error ? err.message : "Failed to fetch media"
       );
     } finally {
       setLoading(false);
@@ -57,10 +58,10 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchImages();
+    fetchMedia();
   }, []);
 
-  const sortedImages = [...images].sort((a, b) => {
+  const sortedMedia = [...media].sort((a, b) => {
     const aPinned = pinnedIds.has(a.id);
     const bPinned = pinnedIds.has(b.id);
 
@@ -69,163 +70,129 @@ export default function Home() {
     return aPinned ? -1 : 1;
   });
 
-  const togglePin = (imageId: string, e: React.MouseEvent) => {
+  const togglePin = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
 
     const newPinned = new Set(pinnedIds);
 
-    if (newPinned.has(imageId)) {
-      newPinned.delete(imageId);
+    if (newPinned.has(id)) {
+      newPinned.delete(id);
     } else {
-      newPinned.add(imageId);
+      newPinned.add(id);
     }
 
     setPinnedIds(newPinned);
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <main className="min-h-screen bg-white text-black dark:bg-black dark:text-white">
+      <div className="mx-auto w-full max-w-5xl px-3 py-6 sm:px-6">
         {/* Header */}
-        <div className="mb-12 flex items-center justify-between">
+        <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-              Task Gallery
-            </h1>
-
-            <p className="text-lg text-gray-600 dark:text-gray-400">
-              Preview images from your Notion tasks
+            <h1 className="text-2xl font-semibold">Content Planner</h1>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Instagram-style preview from your Notion database
             </p>
           </div>
 
           <button
-            onClick={fetchImages}
+            onClick={fetchMedia}
             disabled={loading}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-lg transition-colors duration-200 font-medium"
-            title="Refresh images"
+            className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-900"
           >
-            <svg
-              className={`w-5 h-5 ${loading ? "animate-spin" : ""}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-
-            Refresh
+            {loading ? "Refreshing..." : "Refresh"}
           </button>
         </div>
 
         {/* Loading */}
         {loading && (
-          <div className="flex items-center justify-center py-16">
-            <div className="text-center">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-
-              <p className="mt-4 text-gray-600 dark:text-gray-400">
-                Loading images...
-              </p>
-            </div>
+          <div className="py-20 text-center text-gray-500">
+            Loading your content...
           </div>
         )}
 
         {/* Error */}
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-8">
-            <p className="text-red-800 dark:text-red-200 font-semibold">
-              Error loading images:
-            </p>
-
-            <p className="text-red-700 dark:text-red-300 text-sm mt-2 font-mono break-words">
-              {error}
-            </p>
-
-            <div className="text-red-700 dark:text-red-300 text-sm mt-4">
-              <p className="font-semibold mb-2">Troubleshooting:</p>
-
-              <ul className="list-disc ml-5 space-y-1">
-                <li>Check that your Notion token is valid</li>
-                <li>Verify the database ID is correct</li>
-                <li>Ensure the integration has access to the database</li>
-                <li>Check browser console (F12) for more details</li>
-              </ul>
-            </div>
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+            <strong>Could not load content.</strong>
+            <div className="mt-1 break-words">{error}</div>
           </div>
         )}
 
-        {/* No images */}
-        {!loading && images.length === 0 && !error && (
-          <div className="text-center py-16">
-            <p className="text-gray-600 dark:text-gray-400 text-lg">
-              No images found in your Notion database.
-            </p>
+        {/* Empty */}
+        {!loading && !error && media.length === 0 && (
+          <div className="py-20 text-center text-gray-500">
+            No images or videos found in your Notion database.
           </div>
         )}
 
-        {/* Image Grid */}
-        {!loading && images.length > 0 && (
-          <div className="grid grid-cols-3 gap-4">
-            {sortedImages.slice(0, 15).map((image) => {
-              const isPinned = pinnedIds.has(image.id);
+        {/* Grid */}
+        {!loading && media.length > 0 && (
+          <div className="grid grid-cols-3 gap-1 sm:gap-2">
+            {sortedMedia.slice(0, 30).map((item) => {
+              const isPinned = pinnedIds.has(item.id);
 
               return (
                 <div
-                  key={image.id}
-                  className="relative group overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800 aspect-square cursor-pointer"
-                  onClick={() => setSelectedImage(image)}
+                  key={item.id}
+                  className="group relative aspect-square cursor-pointer overflow-hidden bg-gray-100 dark:bg-gray-900"
+                  onClick={() => setSelectedMedia(item)}
                 >
-                  <img
-                    src={image.src}
-                    alt={image.alt}
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
+                  {/* Image */}
+                  {item.type === "image" && (
+                    <img
+                      src={item.src}
+                      alt={item.alt}
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                  )}
+
+                  {/* Video */}
+                  {item.type === "video" && (
+                    <>
+                      <video
+                        src={item.src}
+                        muted
+                        playsInline
+                        preload="metadata"
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-black/55 text-white">
+                          <svg
+                            className="ml-0.5 h-5 w-5 fill-current"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </div>
+                      </div>
+
+                      <div className="absolute right-2 top-2 rounded-md bg-black/60 px-2 py-1 text-xs font-medium text-white">
+                        Reel
+                      </div>
+                    </>
+                  )}
 
                   {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
+                  <div className="absolute inset-0 bg-black/0 transition group-hover:bg-black/10" />
 
-                  {/* Pin button */}
-                  <button
-                    onClick={(e) => togglePin(image.id, e)}
-                    className="absolute top-2 right-2 z-10 bg-white/90 hover:bg-white text-gray-800 rounded-full p-2 transition-all duration-200 opacity-0 group-hover:opacity-100"
-                    title={isPinned ? "Unpin image" : "Pin image"}
-                  >
-                    {isPinned ? (
-                      <svg
-                        className="w-5 h-5 text-yellow-500"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M10 2a1 1 0 0 1 .95.68l1 3.02 3.02 1a1 1 0 0 1 .68.95v1a1 1 0 0 1-.68.95l-3.02 1-1 3.02a1 1 0 0 1-1.9 0l-1-3.02-3.02-1A1 1 0 0 1 4.35 8.65v-1a1 1 0 0 1 .68-.95l3.02-1 1-3.02A1 1 0 0 1 10 2Z" />
-                      </svg>
-                    ) : (
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 5a2 2 0 012-2h6a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V5z"
-                        />
-                      </svg>
-                    )}
-                  </button>
-
-                  {/* Pinned label */}
+                  {/* Pinned */}
                   {isPinned && (
-                    <div className="absolute top-2 left-2 bg-yellow-400 text-gray-800 px-2 py-1 rounded text-xs font-semibold">
+                    <div className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-xs font-semibold text-black">
                       Pinned
                     </div>
                   )}
+
+                  {/* Pin button */}
+                  <button
+                    onClick={(e) => togglePin(item.id, e)}
+                    className="absolute right-2 bottom-2 hidden rounded-full bg-white/90 px-3 py-2 text-xs font-medium text-black shadow-sm group-hover:block"
+                  >
+                    {isPinned ? "Unpin" : "Pin"}
+                  </button>
                 </div>
               );
             })}
@@ -233,62 +200,46 @@ export default function Home() {
         )}
 
         {/* Lightbox */}
-        {selectedImage && (
+        {selectedMedia && (
           <div
-            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-            onClick={() => setSelectedImage(null)}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
+            onClick={() => setSelectedMedia(null)}
           >
             <div
-              className="relative bg-white dark:bg-gray-900 rounded-lg max-w-2xl w-full shadow-2xl overflow-hidden"
+              className="relative max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-black"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Close button */}
               <button
-                onClick={() => setSelectedImage(null)}
-                className="absolute top-4 right-4 z-10 bg-gray-900/80 hover:bg-gray-900 text-white rounded-full p-2 transition-colors duration-200"
+                onClick={() => setSelectedMedia(null)}
+                className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/70 text-xl text-white"
               >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
+                ×
               </button>
 
-              {/* Full image */}
-              <div className="relative w-full bg-gray-100 dark:bg-gray-800">
+              {selectedMedia.type === "image" ? (
                 <img
-                  src={selectedImage.src}
-                  alt={selectedImage.alt}
-                  className="w-full h-auto object-contain max-h-[80vh]"
+                  src={selectedMedia.src}
+                  alt={selectedMedia.alt}
+                  className="max-h-[80vh] w-full object-contain"
                 />
-              </div>
+              ) : (
+                <video
+                  src={selectedMedia.src}
+                  controls
+                  autoPlay
+                  playsInline
+                  className="max-h-[80vh] w-full object-contain"
+                />
+              )}
 
-              {/* Metadata */}
-              <div className="p-6">
-                {selectedImage.title && (
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                    {selectedImage.title}
-                  </h2>
+              <div className="bg-white p-4 text-black dark:bg-gray-950 dark:text-white">
+                {selectedMedia.title && (
+                  <h2 className="font-semibold">{selectedMedia.title}</h2>
                 )}
 
-                {selectedImage.date && (
-                  <p className="text-gray-600 dark:text-gray-400">
-                    {new Date(selectedImage.date).toLocaleDateString(
-                      "en-US",
-                      {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      }
-                    )}
+                {selectedMedia.date && (
+                  <p className="mt-1 text-sm text-gray-500">
+                    {new Date(selectedMedia.date).toLocaleDateString()}
                   </p>
                 )}
               </div>
@@ -296,6 +247,6 @@ export default function Home() {
           </div>
         )}
       </div>
-    </div>
+    </main>
   );
 }
